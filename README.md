@@ -8,21 +8,27 @@ This portfolio contains multiple Jupyter notebooks demonstrating different LLM e
 
 ### Competitive Intelligence Analyzer
 
-**File:** `competitive_intelligence_analyzer.ipynb`
+**File:** `01_competitive_intelligence_analyzer.ipynb`
 
 A multi-agent system that analyzes company websites to generate comprehensive competitive intelligence reports.
 
 ### Multi-Agent Chat System
 
-**File:** `multi_agent_chat.ipynb`
+**File:** `02_multi_agent_chat.ipynb`
 
 A 3-way conversation system with AI agents having distinct personalities and different model configurations.
 
 ### Car Rental Customer Service Assistant
 
-**File:** `car_rental_assistant.ipynb`
+**File:** `03_car_rental_assistant.ipynb`
 
 A customer service assistant for a car rental company with tool calling capabilities and database integration.
+
+### Synthetic Data Generator
+
+**File:** `04_synthetic_data_generator.ipynb`
+
+Generate synthetic datasets using multiple open-source LLMs with 4-bit quantization for efficient GPU usage.
 
 ## Setup
 
