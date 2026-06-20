@@ -30,6 +30,12 @@ A customer service assistant for a car rental company with tool calling capabili
 
 Generate synthetic datasets using multiple open-source LLMs with 4-bit quantization for efficient GPU usage.
 
+### Python to C++ Porting with Frontier LLMs
+
+**File:** `05_python_to_cpp_porting.ipynb`
+
+Port Python code to high-performance C++ using frontier open-source LLMs via Groq's completely free API. Features LLM-based compiler configuration, system detection, and performance benchmarking.
+
 ## Setup
 
 ```bash
