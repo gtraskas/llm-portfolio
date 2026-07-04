@@ -2,7 +2,7 @@
 
 Mirrors pricer/items.py from Ed Donner's week 6 — same interface, wine domain.
 Target is `vfm` (0-99): log(points/price) scaled by fixed analytic bounds,
-computed deterministically by wine_critic.vfm (no fitting, no artifacts).
+computed deterministically by utils.vfm (no fitting, no artifacts).
 `points` and `price` remain as real source quantities — the frontier
 zero-shot path estimates those and runs them through the same frozen scaler.
 """
@@ -28,7 +28,7 @@ class Wine(BaseModel):
         points: Critic score 80-100 — source quantity for VFM.
         price: Bottle price in USD ($4-250 after curation) — source quantity.
         vfm: Value-for-money score 0-99 — THE TARGET. Set by
-            wine_critic.vfm.apply_vfm() right after curation.
+            utils.vfm.apply_vfm() right after curation.
         country: Country of origin.
         province: Province or state.
         region: Sub-region (region_1 in the source data).
