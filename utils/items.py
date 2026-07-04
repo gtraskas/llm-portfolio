@@ -1,6 +1,5 @@
 """Wine data-point: a tasting note with a value-for-money (VFM) target.
 
-Mirrors pricer/items.py from Ed Donner's week 6 — same interface, wine domain.
 Target is `vfm` (0-99): log(points/price) scaled by fixed analytic bounds,
 computed deterministically by utils.vfm (no fitting, no artifacts).
 `points` and `price` remain as real source quantities — the frontier
@@ -36,7 +35,10 @@ class Wine(BaseModel):
         winery: Producer name.
         full: Raw tasting-note description.
         summary: Assembled/standardized model input text.
-        prompt: Completion-style training prompt.
+        prompt: Fused prompt+answer string (evaluator/baseline path, week 6).
+        completion: Answer-only string, paired with `prompt` for training
+            frameworks that require the question/answer split (e.g. SFT
+            trainers). Set by `make_training_prompt`, unrelated to `prompt`.
         id: Stable index assigned after curation.
     """
 
@@ -52,17 +54,54 @@ class Wine(BaseModel):
     full: Optional[str] = None
     summary: Optional[str] = None
     prompt: Optional[str] = None
+    completion: Optional[str] = None
     id: Optional[int] = None
 
     def make_prompt(self, text: str) -> None:
-        """Build the completion-style prompt from the given input text."""
+        """Build the fused prompt+answer string — used by the baseline
+        evaluator path. Unchanged; do not remove."""
         if self.vfm is None:
             raise ValueError("vfm is not set — run vfm.apply_vfm() first.")
         self.prompt = f"{QUESTION}\n\n{text}\n\n{PREFIX}{self.vfm}"
 
     def test_prompt(self) -> str:
-        """Return the prompt with the answer stripped — for inference."""
+        """Return the fused prompt with the answer stripped — for inference."""
         return self.prompt.split(PREFIX)[0] + PREFIX
+
+    def count_tokens(self, tokenizer) -> int:
+        """Token count of `summary` under the given tokenizer."""
+        return len(tokenizer.encode(self.summary, add_special_tokens=False))
+
+    def make_training_prompt(self, tokenizer, max_tokens: int, do_round: bool) -> None:
+        """Build the SPLIT prompt/completion pair required by SFT trainers.
+
+        Truncates `summary` to `max_tokens` if needed, then sets:
+          - self.prompt: question + (possibly truncated) summary + answer prefix
+          - self.completion: the answer only
+
+        Separate from `make_prompt`/`prompt` above — training frameworks need
+        the question and answer as two distinct fields so the loss can be
+        masked to the answer only.
+        """
+        if self.vfm is None:
+            raise ValueError("vfm is not set — run vfm.apply_vfm() first.")
+        tokens = tokenizer.encode(self.summary, add_special_tokens=False)
+        text = (
+            tokenizer.decode(tokens[:max_tokens]).rstrip()
+            if len(tokens) > max_tokens
+            else self.summary
+        )
+        self.prompt = f"{QUESTION}\n\n{text}\n\n{PREFIX}"
+        self.completion = str(round(self.vfm)) if do_round else str(self.vfm)
+
+    def count_prompt_tokens(self, tokenizer) -> int:
+        """Total token count of prompt + completion combined."""
+        full = self.prompt + self.completion
+        return len(tokenizer.encode(full, add_special_tokens=False))
+
+    def to_datapoint(self) -> dict:
+        """Return the {prompt, completion} record expected by SFT trainers."""
+        return {"prompt": self.prompt, "completion": self.completion}
 
     def __repr__(self) -> str:
         return (
@@ -80,6 +119,22 @@ class Wine(BaseModel):
                 "train": Dataset.from_list([w.model_dump() for w in train]),
                 "validation": Dataset.from_list([w.model_dump() for w in val]),
                 "test": Dataset.from_list([w.model_dump() for w in test]),
+            }
+        ).push_to_hub(dataset_name)
+
+    @staticmethod
+    def push_prompts_to_hub(
+        dataset_name: str, train: list[Self], val: list[Self], test: list[Self]
+    ) -> None:
+        """Push {prompt, completion} records to the Hub — training-ready format.
+
+        Requires `make_training_prompt` to have been called on every wine first.
+        """
+        DatasetDict(
+            {
+                "train": Dataset.from_list([w.to_datapoint() for w in train]),
+                "val": Dataset.from_list([w.to_datapoint() for w in val]),
+                "test": Dataset.from_list([w.to_datapoint() for w in test]),
             }
         ).push_to_hub(dataset_name)
 
