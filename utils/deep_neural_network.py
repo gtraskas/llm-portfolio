@@ -131,3 +131,22 @@ class VfmTrainer:
         with torch.no_grad():
             normalized = self.model(torch.FloatTensor(features).to(DEVICE)).item()
         return normalized * self.y_std + self.y_mean
+
+    def save(self, path: str) -> None:
+        """Persist weights and target-normalization stats together.
+
+        The stats travel with the weights: predictions are only correct if
+        inference inverts the exact standardization used in training.
+        """
+        torch.save(
+            {"state_dict": self.model.state_dict(), "y_mean": self.y_mean, "y_std": self.y_std},
+            path,
+        )
+
+    def load(self, path: str) -> None:
+        """Restore weights and target-normalization stats."""
+        checkpoint = torch.load(path, map_location=DEVICE)
+        self.model.load_state_dict(checkpoint["state_dict"])
+        self.y_mean = float(checkpoint["y_mean"])
+        self.y_std = float(checkpoint["y_std"])
+        self.model.eval()
